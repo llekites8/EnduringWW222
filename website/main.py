@@ -5,7 +5,7 @@ import random
 hide_debug_information()
 set_website_title("Enduring WW2")
 set_website_framed(False)
-
+hide_debug_information()
 @dataclass
 class State:
     name:str
@@ -675,12 +675,11 @@ def youvebeenkilled3(state:State)->Page:
         
         
         
+          
         
         
         
         
-        
-        
-        
+hide_debug_information()
 
 start_server(State("no",0, "no"))
