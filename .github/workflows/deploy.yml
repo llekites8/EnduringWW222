@@ -27,6 +27,7 @@ jobs:
             name: github-pages
             url: ${{ steps.deployment.outputs.page_url }}
         runs-on: ubuntu-latest
+        timeout-minutes: 4
         steps:
             - name: Checkout
               uses: actions/checkout@v4
@@ -180,7 +181,7 @@ jobs:
 
                   printf 'Successfully passed structural checks\n' >> ./dist/_build_log.txt
             # Compile their site into JS
-            - name: Compile Site 
+            - name: Compile Site
               id: compile_site
               run: |
                   echo "<html><body><pre>" > ./dist/compile.html
@@ -201,7 +202,7 @@ jobs:
               id: dependencies
               run: |
                   echo "<html><body><pre>" > ./dist/installation.html
-                  python -m pip install coverage drafter bakery pylint mypy matplotlib pillow coverage pymarkdownlnt vulture 2> >(tee ./dist/_ERRORS.txt) |& tee -a ./dist/installation.html
+                  python -m pip install coverage drafter bakery pylint mypy matplotlib pillow coverage pymarkdownlnt 2> >(tee ./dist/_ERRORS.txt) |& tee -a ./dist/installation.html
                   : # Install students' requirements.txt file if it is present
                   if [ -f website/requirements.txt ]; then
                       python -m pip install -r website/requirements.txt 2> >(tee ./dist/_ERRORS.txt) |& tee -a ./dist/installation.html
@@ -248,17 +249,6 @@ jobs:
                   echo '* [Type](../type.html): The results of running a *typechecker* (`MyPy`) on your code. This is a sophisticated piece of software that can identify type issues. However, you should take it with a grain of salt, since it may raise issues that are outside of the scope of this course. ' >> docs/dashboard.md
 
                   printf 'Successfully ran type checker\n' >> ./dist/_build_log.txt
-            - name: Create Vulture report
-              id: vulture
-              continue-on-error: true
-              run: |
-                  echo "<html><body><pre>" > ./dist/vulture.html
-                  : # Not yet comfortable with mypy, so running it in a continue-on-error mode and not failing the build
-                  python -m vulture website/main.py --ignore-decorators @route |& tee -a ./dist/_build_log.txt ./dist/vulture.html
-                  echo "</pre></body></html>" >> ./dist/vulture.html
-                  echo '* [Vulture](../vulture.html): The results of running Vulture on your code. This looks for variables, functions, and class fields that might be unused after being declared. Take it with a grain of salt and look over the code yourself before you trust what it says! ' >> docs/dashboard.md
-
-                  printf 'Successfully ran Vulture\n' >> ./dist/_build_log.txt
             - name: Create integrity report
               if: ${{ !cancelled() }}
               id: integrity
@@ -313,8 +303,8 @@ jobs:
                   : # If the ./dist/_ERRORS.txt file is not empty, then prepend it to the dashboard
                   if [ -s ./dist/_ERRORS.txt ]; then
                       touch ./dist/_ERRORS_HEADER.md
-                      printf '# Dashboard\n\n## Error During Build!\n\n!!! failure\n    There was an error during your build. Details are below:\n\n```\n' > ./dist/_ERRORS_HEADER.md
-                      printf '\n```\n' >> ./dist/_ERRORS.txt
+                      printf '# Dashboard\n\n## Error During Build!\n\n!!! failure\n    There was an error during your build. Details are below:\n\n```' > ./dist/_ERRORS_HEADER.md
+                      printf '```\n' >> ./dist/_ERRORS.txt
                       cat ./dist/_ERRORS_HEADER.md ./dist/_ERRORS.txt ./docs/dashboard.md > ./dist/tmp.md
                       mv ./dist/tmp.md ./docs/dashboard.md
                       printf 'Errors found during build. They were prepended to dashboard.\n' >> ./dist/_build_log.txt
@@ -322,8 +312,8 @@ jobs:
                     : # If the ./dist/_WARNINGS.txt file is not empty, then prepend it to the dashboard
                     if [ -s ./dist/_WARNINGS.txt ]; then
                         touch ./dist/_WARNINGS_HEADER.md
-                        printf '# Dashboard\n\n## Warning During Build!\n\n!!! warning\n    There was one or more warnings during your build. Details are below:\n\n```\n' > ./dist/_WARNINGS_HEADER.md
-                        printf '\n```\n' >> ./dist/_WARNINGS.txt
+                        printf '# Dashboard\n\n## Warning During Build!\n\n!!! warning\n    There was one or more warnings during your build. Details are below:\n\n```' > ./dist/_WARNINGS_HEADER.md
+                        printf '```\n' >> ./dist/_WARNINGS.txt
                         cat ./dist/_WARNINGS_HEADER.md ./dist/_WARNINGS.txt ./docs/dashboard.md > ./dist/tmp.md
                         mv ./dist/tmp.md ./docs/dashboard.md
                         printf 'Warnings found during build. They were prepended to dashboard.\n' >> ./dist/_build_log.txt
@@ -340,10 +330,10 @@ jobs:
               if: ${{ !cancelled() }}
               run: |
                   printf '\n## Build Log\n' >> ./docs/dashboard.md
-                  printf '\n```\n' >> ./docs/dashboard.md
+                  echo '```' >> ./docs/dashboard.md
                   cat ./dist/_build_log.txt >> ./docs/dashboard.md
-                  printf '\n```\n' >> ./docs/dashboard.md
-                  printf 'Build log added to dashboard. Preparing to generate final HTML and deploy!' >> ./docs/dashboard.md
+                  echo '```' >> ./docs/dashboard.md
+                  printf 'Build log added to dashboard.Preparing to generate final HTML and deploy!' >> ./docs/dashboard.md
             # Regardless of anything else, generate the HTML from the Markdown files
             - name: Generate HTML from Markdown in Docs/
               if: ${{ !cancelled() }}
@@ -357,12 +347,12 @@ jobs:
               uses: actions/configure-pages@v3
               if: ${{ !cancelled() }}
             - name: Upload artifact
-              uses: actions/upload-pages-artifact@v3
+              uses: actions/upload-pages-artifact@main
               if: ${{ !cancelled() }}
               with:
                   # Upload entire repository
                   path: "dist/"
             - name: Deploy to GitHub Pages
               id: deployment
-              uses: actions/deploy-pages@v3
+              uses: actions/deploy-pages@v4
               if: ${{ !cancelled() }}
